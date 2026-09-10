@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Isaac-like Survival</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: Arial, sans-serif;
+    color: white;
+  }
+  h1 { margin: 12px 0 4px; }
+  #hint { color: #aaa; margin-bottom: 8px; font-size: 14px; }
+  canvas {
+    background: #2b2b2b;
+    border: 4px solid #5a3d2b;
+    display: block;
+  }
+  #overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: rgba(0,0,0,0.75);
+  }
+  #overlay button {
+    margin-top: 12px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    background: #e63946;
+    color: white;
+  }
+</style>
+</head>
+<body>
+<h1>ISAAC-LIKE SURVIVAL</h1>
+<div id="hint">WASD: mover &nbsp;|&nbsp; Flechas: disparar</div>
+<div style="position:relative;">
+  <canvas id="canvas" width="800" height="500"></canvas>
+  <div id="overlay">
+    <h2 id="overlayText">GAME OVER</h2>
+    <div id="finalScore"></div>
+    <button onclick="restartGame()">Reintentar</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
+const overlayText = document.getElementById("overlayText");
+const finalScoreEl = document.getElementById("finalScore");
+
+const ROOM_MARGIN = 30; // paredes del cuarto
+
+// ---------- Jugador ----------
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  radius: 14,
+  speed: 3.2,
+  health: 6,      // 6 "de vida" simple (barra, no corazones)
+  maxHealth: 6,
+  invuln: 0,
+  shootDir: { x: 0, y: -1 },
+  shootCooldown: 0,
+  shootPulse: 0     // frames de "pulso" visual al disparar
+};
+
+let tears = [];
+let enemies = [];
+let particles = [];
+let rocks = [];
+let score = 0;
+let frame = 0;
+let running = true;
+
+// ---------- Funciones de transformación (mismas de la clase de matrices) ----------
+function translatePoint(point, tx, ty) {
+  return {
+    x: point.x + tx,
+    y: point.y + ty
+  };
+}
+
+function scalePoint(point, sx, sy) {
+  return {
+    x: point.x * sx,
+    y: point.y * sy
+  };
+}
+
+function rotatePoint(point, angle) {
+  return {
+    x: point.x * Math.cos(angle) - point.y * Math.sin(angle),
+    y: point.x * Math.sin(angle) + point.y * Math.cos(angle)
+  };
+}
+
+// Vertices base de la mirilla (un pequeño triangulo apuntando "hacia arriba")
+const AIM_VERTICES = [
+  { x: 0, y: -10 },
+  { x: 6, y: 5 },
+  { x: -6, y: 5 }
+];
+
+// Igual que "drawPolygon" del PDF: mueve el trazo por los vertices y cierra la figura
+function drawPolygon(vertices, color) {
+  ctx.beginPath();
+  ctx.moveTo(vertices[0].x, vertices[0].y);
+  for (let i = 1; i < vertices.length; i++) {
+    ctx.lineTo(vertices[i].x, vertices[i].y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+// Dibuja la mirilla: escala (pulso al disparar) -> rota (hacia shootDir) -> traslada (a la posicion del jugador)
+function drawAimIndicator() {
+  const angle = Math.atan2(player.shootDir.y, player.shootDir.x) + Math.PI / 2;
+  const pulse = 1 + (player.shootPulse / 8) * 0.6;
+  const offsetDist = player.radius + 14;
+  const offsetX = player.x + player.shootDir.x * offsetDist;
+  const offsetY = player.y + player.shootDir.y * offsetDist;
+
+  const transformed = AIM_VERTICES.map(v => {
+    const scaled = scalePoint(v, pulse, pulse);
+    const rotated = rotatePoint(scaled, angle);
+    return translatePoint(rotated, offsetX, offsetY);
+  });
+
+  drawPolygon(transformed, "#ffd166");
+}
+
+// Igual que "crashWith" del PDF del juego: colision por rectangulos (AABB)
+function crashWith(a, b) {
+  return !(
+    a.y + a.height < b.y ||
+    a.y > b.y + b.height ||
+    a.x + a.width < b.x ||
+    a.x > b.x + b.width
+  );
+}
+function boxOf(entity) {
+  return {
+    x: entity.x - entity.radius,
+    y: entity.y - entity.radius,
+    width: entity.radius * 2,
+    height: entity.radius * 2
+  };
+}
+
+// Obstaculos fijos tipo "rocas" de Isaac
+function setupRocks() {
+  rocks = [
+    { x: 200, y: 150, w: 34, h: 34 },
+    { x: 600, y: 150, w: 34, h: 34 },
+    { x: 200, y: 350, w: 34, h: 34 },
+    { x: 600, y: 350, w: 34, h: 34 }
+  ];
+}
+setupRocks();
+
+const keys = {};
+window.addEventListener("keydown", e => keys[e.code] = true);
+window.addEventListener("keyup", e => keys[e.code] = false);
+
+
+// ---------- Utilidades ----------
+function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+  return !(ax + aw < bx || ax > bx + bw || ay + ah < by || ay > by + bh);
+}
+function circleRectCollide(cx, cy, cr, rx, ry, rw, rh) {
+  const closestX = Math.max(rx, Math.min(cx, rx + rw));
+  const closestY = Math.max(ry, Math.min(cy, ry + rh));
+  const dx = cx - closestX;
+  const dy = cy - closestY;
+  return (dx * dx + dy * dy) < (cr * cr);
+}
+
+// ---------- Dibujo del personaje estilo Isaac (cabeza grande, cuerpo chico) ----------
+function drawIsaacGuy(x, y, radius, bodyColor, headColor, hitFlash) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // cuerpo (ovalo chico debajo)
+  ctx.fillStyle = hitFlash ? "#ffcc00" : bodyColor;
+  ctx.beginPath();
+  ctx.ellipse(0, radius * 0.7, radius * 0.7, radius * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // cabeza (circulo grande)
+  ctx.fillStyle = hitFlash ? "#ffe066" : headColor;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#00000055";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // ojos simples
+  ctx.fillStyle = "#222";
+  ctx.beginPath();
+  ctx.arc(-radius * 0.35, -radius * 0.1, 2.5, 0, Math.PI * 2);
+  ctx.arc(radius * 0.35, -radius * 0.1, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawRocks() {
+  rocks.forEach(r => {
+    ctx.fillStyle = "#6b6b6b";
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.strokeStyle = "#3d3d3d";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+  });
+}
+
+// ---------- Movimiento del jugador (WASD) ----------
+function updatePlayer() {
+  let dx = 0, dy = 0;
+  if (keys["KeyA"]) dx -= 1;
+  if (keys["KeyD"]) dx += 1;
+  if (keys["KeyW"]) dy -= 1;
+  if (keys["KeyS"]) dy += 1;
+
+  if (dx !== 0 || dy !== 0) {
+    const len = Math.hypot(dx, dy);
+    const nx = player.x + (dx / len) * player.speed;
+    const ny = player.y + (dy / len) * player.speed;
+
+    // colision con rocas antes de mover
+    let blockedX = rocks.some(r => circleRectCollide(nx, player.y, player.radius, r.x, r.y, r.w, r.h));
+    let blockedY = rocks.some(r => circleRectCollide(player.x, ny, player.radius, r.x, r.y, r.w, r.h));
+
+    if (!blockedX) player.x = nx;
+    if (!blockedY) player.y = ny;
+  }
+
+  player.x = Math.max(ROOM_MARGIN + player.radius, Math.min(canvas.width - ROOM_MARGIN - player.radius, player.x));
+  player.y = Math.max(ROOM_MARGIN + player.radius, Math.min(canvas.height - ROOM_MARGIN - player.radius, player.y));
+
+  if (player.invuln > 0) player.invuln--;
+  if (player.shootCooldown > 0) player.shootCooldown--;
+  if (player.shootPulse > 0) player.shootPulse--;
+
+  // disparo con flechas (independiente del movimiento)
+  let sx = 0, sy = 0;
+  if (keys["ArrowLeft"]) sx -= 1;
+  if (keys["ArrowRight"]) sx += 1;
+  if (keys["ArrowUp"]) sy -= 1;
+  if (keys["ArrowDown"]) sy += 1;
+
+  if ((sx !== 0 || sy !== 0) && player.shootCooldown <= 0) {
+    const len = Math.hypot(sx, sy);
+    player.shootDir = { x: sx / len, y: sy / len };
+    shootTear();
+    player.shootCooldown = 12;
+  }
+}
+
+function shootTear() {
+  tears.push({
+    x: player.x,
+    y: player.y,
+    vx: player.shootDir.x * 7,
+    vy: player.shootDir.y * 7,
+    radius: 6
+  });
+  player.shootPulse = 8;
+}
+
+// ---------- Enemigos ----------
+function spawnEnemy() {
+  const edge = Math.floor(Math.random() * 4);
+  let x, y;
+  if (edge === 0) { x = ROOM_MARGIN + 10; y = Math.random() * canvas.height; }
+  else if (edge === 1) { x = canvas.width - ROOM_MARGIN - 10; y = Math.random() * canvas.height; }
+  else if (edge === 2) { x = Math.random() * canvas.width; y = ROOM_MARGIN + 10; }
+  else { x = Math.random() * canvas.width; y = canvas.height - ROOM_MARGIN - 10; }
+
+  const speedBoost = Math.min(1.5, frame / 3500);
+  enemies.push({
+    x, y,
+    radius: 13,
+    speed: 1 + Math.random() * 0.6 + speedBoost,
+    health: 2,
+    hitFlash: 0
+  });
+}
+
+function spawnBoss() {
+  const edge = Math.floor(Math.random() * 4);
+  let x, y;
+  if (edge === 0) { x = ROOM_MARGIN + 10; y = Math.random() * canvas.height; }
+  else if (edge === 1) { x = canvas.width - ROOM_MARGIN - 10; y = Math.random() * canvas.height; }
+  else if (edge === 2) { x = Math.random() * canvas.width; y = ROOM_MARGIN + 10; }
+  else { x = Math.random() * canvas.width; y = canvas.height - ROOM_MARGIN - 10; }
+
+  // Cada jefe siguiente es un poco mas grande y resistente que el anterior
+  const tier = Math.floor(frame / 3000);
+  enemies.push({
+    x, y,
+    radius: 26 + tier * 4,
+    speed: 0.8,
+    health: 10 + tier * 6,
+    maxHealth: 10 + tier * 6,
+    hitFlash: 0,
+    isBoss: true,
+    scaleFactor: 1,
+    growing: true
+  });
+}
+
+function updateEnemies() {
+  enemies.forEach(en => {
+    const dx = player.x - en.x;
+    const dy = player.y - en.y;
+    const dist = Math.hypot(dx, dy) || 1;
+
+    const nx = en.x + (dx / dist) * en.speed;
+    const ny = en.y + (dy / dist) * en.speed;
+    const blocked = rocks.some(r => circleRectCollide(nx, ny, en.radius, r.x, r.y, r.w, r.h));
+    if (!blocked) { en.x = nx; en.y = ny; }
+
+    if (en.hitFlash > 0) en.hitFlash--;
+
+    // "respiracion" del jefe: mismo patron growing/scaleFactor de la diapositiva de animacion
+    if (en.isBoss) {
+      if (en.growing) {
+        en.scaleFactor += 0.004;
+        if (en.scaleFactor > 1.15) en.growing = false;
+      } else {
+        en.scaleFactor -= 0.004;
+        if (en.scaleFactor < 0.9) en.growing = true;
+      }
+    }
+
+    if (crashWith(boxOf(en), boxOf(player)) && player.invuln <= 0) {
+      player.health -= en.isBoss ? 2 : 1;
+      player.invuln = 50;
+      spawnParticles(player.x, player.y, "#ff4d4d");
+      if (player.health <= 0) endGame();
+    }
+  });
+}
+
+// ---------- Lagrimas vs enemigos / rocas / paredes ----------
+function updateTears() {
+  tears.forEach(t => {
+    t.x += t.vx;
+    t.y += t.vy;
+  });
+
+  tears = tears.filter(t => {
+    if (t.x < ROOM_MARGIN || t.x > canvas.width - ROOM_MARGIN ||
+        t.y < ROOM_MARGIN || t.y > canvas.height - ROOM_MARGIN) return false;
+    if (rocks.some(r => circleRectCollide(t.x, t.y, t.radius, r.x, r.y, r.w, r.h))) return false;
+    return true;
+  });
+
+  tears = tears.filter(t => {
+    let hit = false;
+    const tearBox = { x: t.x - t.radius, y: t.y - t.radius, width: t.radius * 2, height: t.radius * 2 };
+    enemies.forEach(en => {
+      if (!hit && crashWith(tearBox, boxOf(en))) {
+        en.health -= 1;
+        en.hitFlash = 6;
+        hit = true;
+      }
+    });
+    return !hit;
+  });
+
+  enemies = enemies.filter(en => {
+    if (en.health <= 0) {
+      spawnParticles(en.x, en.y, "#ffd166");
+      score += 15;
+      return false;
+    }
+    return true;
+  });
+}
+
+// ---------- Particulas ----------
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 4,
+      vy: (Math.random() - 0.5) * 4,
+      life: 20,
+      color
+    });
+  }
+}
+function updateParticles() {
+  particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life--; });
+  particles = particles.filter(p => p.life > 0);
+}
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life / 20;
+    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+    ctx.globalAlpha = 1;
+  });
+}
+
+// ---------- UI ----------
+function drawRoom() {
+  ctx.fillStyle = "#3a3a3a";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#2b2b2b";
+  ctx.fillRect(ROOM_MARGIN, ROOM_MARGIN, canvas.width - ROOM_MARGIN * 2, canvas.height - ROOM_MARGIN * 2);
+}
+
+function drawUI() {
+  ctx.fillStyle = "#333";
+  ctx.fillRect(20, canvas.height - 5, 0, 0); // no-op placeholder
+  // barra de vida simple
+  ctx.fillStyle = "#222";
+  ctx.fillRect(10, 10, 180, 16);
+  ctx.fillStyle = player.health > 2 ? "#4caf50" : "#e63946";
+  ctx.fillRect(10, 10, 180 * (player.health / player.maxHealth), 16);
+  ctx.strokeStyle = "white";
+  ctx.strokeRect(10, 10, 180, 16);
+
+  ctx.fillStyle = "white";
+  ctx.font = "18px Arial";
+  ctx.fillText("Puntos: " + score, canvas.width - 150, 26);
+}
+
+// ---------- Loop principal ----------
+function gameLoop() {
+  if (!running) return;
+  frame++;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawRoom();
+  drawRocks();
+
+  const spawnInterval = Math.max(30, 100 - Math.floor(frame / 120));
+  if (frame % spawnInterval === 0) spawnEnemy();
+  if (frame > 0 && frame % 3000 === 0) spawnBoss();
+
+  updatePlayer();
+  updateEnemies();
+  updateTears();
+  updateParticles();
+
+  score += 1;
+
+  // dibujar lagrimas
+  tears.forEach(t => {
+    ctx.fillStyle = "#8ecae6";
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  enemies.forEach(en => {
+    if (en.isBoss) {
+      const pulsedRadius = en.radius * en.scaleFactor;
+      drawIsaacGuy(en.x, en.y, pulsedRadius, "#3a0ca3", "#7209b7", en.hitFlash > 0);
+      // barra de vida del jefe
+      const barW = en.radius * 2;
+      ctx.fillStyle = "#222";
+      ctx.fillRect(en.x - barW / 2, en.y - en.radius - 14, barW, 6);
+      ctx.fillStyle = "#e63946";
+      ctx.fillRect(en.x - barW / 2, en.y - en.radius - 14, barW * (en.health / en.maxHealth), 6);
+    } else {
+      drawIsaacGuy(en.x, en.y, en.radius, "#8b1e1e", "#c1121f", en.hitFlash > 0);
+    }
+  });
+
+  const blinking = player.invuln > 0 && Math.floor(player.invuln / 4) % 2 === 0;
+  if (!blinking) {
+    drawIsaacGuy(player.x, player.y, player.radius, "#1d3557", "#f1c27d", false);
+    drawAimIndicator();
+  }
+
+  drawParticles();
+  drawUI();
+
+  requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  running = false;
+  overlayText.textContent = "GAME OVER";
+  finalScoreEl.textContent = "Puntaje final: " + score;
+  overlay.style.display = "flex";
+}
+
+function restartGame() {
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
+  player.health = player.maxHealth;
+  player.invuln = 0;
+  player.shootCooldown = 0;
+  player.shootPulse = 0;
+  tears = [];
+  enemies = [];
+  particles = [];
+  score = 0;
+  frame = 0;
+  running = true;
+  overlay.style.display = "none";
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
