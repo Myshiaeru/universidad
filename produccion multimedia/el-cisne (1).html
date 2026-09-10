@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Cisne — Restaurante Tradicional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FAF5EA;
+    --cream-2:#F3ECDC;
+    --ink:#2A2018;
+    --ink-soft:#5C5044;
+    --red:#B5292A;
+    --red-dark:#8E1F20;
+    --green:#22402D;
+    --green-dark:#152A1D;
+    --gold:#E8A23C;
+    --brown:#2C1C12;
+    --line:#E4D9C4;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'Work Sans', sans-serif;
+    color:var(--ink);
+    background:var(--cream);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+  img{max-width:100%;display:block;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
+  ul{list-style:none;}
+
+  /* focus visibility */
+  a:focus-visible, button:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+
+  /* ===== Top bar ===== */
+  .topbar{
+    background:var(--brown);
+    color:#EFE3D0;
+    font-size:13px;
+  }
+  .topbar .wrap{
+    display:flex;justify-content:space-between;align-items:center;
+    padding-top:9px;padding-bottom:9px;
+  }
+  .topbar strong{color:var(--gold);font-weight:600;}
+  .topbar .calls{display:flex;gap:18px;color:#EFE3D0;}
+  .topbar .calls span{opacity:.55;margin:0 2px;}
+
+  /* ===== Header ===== */
+  header{
+    background:var(--cream);
+    border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:20;
+  }
+  header .wrap{
+    display:flex;align-items:center;justify-content:space-between;
+    padding-top:18px;padding-bottom:18px;
+  }
+  .brand{display:flex;align-items:center;}
+  .brand .names{line-height:1.15;}
+  .brand .names strong{display:block;font-family:'Fraunces',serif;font-size:20px;}
+  .brand .names small{display:block;font-size:11px;letter-spacing:.06em;color:var(--ink-soft);}
+  nav ul{display:flex;gap:34px;font-size:15px;font-weight:500;}
+  nav a{position:relative;padding:4px 0;}
+  nav a:hover{color:var(--red);}
+
+  /* ===== Hero ===== */
+  .hero{padding:64px 0 76px;}
+  .hero .wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
+  .eyebrow{
+    display:inline-block;font-size:13px;font-weight:600;color:var(--red);
+    margin-bottom:14px;
+  }
+  .hero h1{font-size:46px;line-height:1.08;margin-bottom:20px;}
+  .hero h1 em{font-style:normal;color:var(--red);}
+  .hero p{font-size:16px;color:var(--ink-soft);max-width:46ch;margin-bottom:26px;}
+  .badges{display:flex;gap:22px;flex-wrap:wrap;}
+  .badges span{font-size:13.5px;font-weight:500;}
+  .hero-photo{position:relative;}
+  .hero-photo .frame{
+    aspect-ratio:4/3;border-radius:var(--radius);
+    background:
+      radial-gradient(circle at 30% 25%, rgba(255,255,255,.18), transparent 45%),
+      linear-gradient(150deg,#C96A2E 0%, #A6401F 45%, #6E2A1A 100%);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 24px 48px -18px rgba(60,30,10,.45);
+    overflow:hidden;
+  }
+  .price-tag{
+    position:absolute;right:-14px;bottom:-18px;
+    background:var(--gold);color:var(--brown);
+    padding:14px 22px;border-radius:12px;
+    text-align:center;box-shadow:0 14px 26px -10px rgba(0,0,0,.35);
+  }
+  .price-tag small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;}
+  .price-tag strong{display:block;font-family:'Fraunces',serif;font-size:26px;line-height:1.1;}
+
+  /* ===== section shared ===== */
+  section{padding:72px 0;}
+  .section-head{text-align:center;max-width:560px;margin:0 auto 46px;}
+  .section-head .eyebrow{
+    background:var(--cream-2);padding:6px 14px;border-radius:20px;
+  }
+  .section-head h2{font-size:32px;margin:14px 0 12px;}
+  .section-head p{color:var(--ink-soft);font-size:15.5px;}
+
+  /* ===== Especialidades ===== */
+  .specialties{background:#fff;}
+  .spec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;}
+  .spec-card{
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+    background:var(--cream);
+  }
+  .spec-photo{
+    aspect-ratio:4/3;position:relative;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .spec-photo .tag{
+    position:absolute;top:12px;left:12px;
+    background:var(--green-dark);color:#fff;
+    font-size:11px;font-weight:600;padding:6px 11px;border-radius:20px;
+  }
+  .spec-card:nth-child(1) .spec-photo{background:linear-gradient(150deg,#E4B65B,#C1272D 90%);}
+  .spec-card:nth-child(2) .spec-photo{background:linear-gradient(150deg,#8A5A3B,#3C2314 90%);}
+  .spec-card:nth-child(3) .spec-photo{background:linear-gradient(150deg,#D89B4A,#7A3B1E 90%);}
+  .spec-body{padding:18px 20px 22px;}
+  .spec-title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:10px;}
+  .spec-title h3{font-size:18px;}
+  .spec-title .price{color:var(--red);font-weight:700;font-size:16px;white-space:nowrap;}
+  .spec-body p{font-size:13.5px;color:var(--ink-soft);}
+
+  /* ===== Categorias ===== */
+  .categories .wrap > .cat-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:24px;
+  }
+  .cat-card{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:26px 28px;
+  }
+  .cat-card.dark{background:var(--green-dark);border-color:var(--green-dark);color:#F3ECDC;}
+  .cat-card.dark h3, .cat-card.dark p{color:#F3ECDC;}
+  .cat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px;}
+  .cat-head h3{font-size:19px;}
+  .pill{
+    font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;
+    white-space:nowrap;
+  }
+  .pill.yellow{background:var(--gold);color:var(--brown);}
+  .pill.red{background:var(--red);color:#fff;}
+  .cat-card p{font-size:14px;color:var(--ink-soft);margin-bottom:16px;}
+  .cat-photo{
+    aspect-ratio:16/10;border-radius:10px;margin-bottom:16px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .cat-card:nth-of-type(1) .cat-photo{background:linear-gradient(150deg,#E9C066,#B5292A 95%);}
+  .cat-card.dark .cat-photo{display:none;}
+  .cat-foot{font-size:13px;font-weight:600;color:var(--green);}
+  .cat-card.dark .cat-foot{color:var(--gold);}
+
+  .price-list{margin-bottom:8px;}
+  .price-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:13px 0;border-bottom:1px solid var(--line);
+  }
+  .price-row:last-child{border-bottom:none;}
+  .price-row .name{font-weight:600;font-size:15px;}
+  .price-row .desc{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .price-row .price{color:var(--red);font-weight:700;font-size:15px;white-space:nowrap;padding-left:12px;}
+
+  .protein-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;margin-bottom:18px;
+  }
+  .protein-grid li{font-size:14px;}
+
+  .almuerzo-photo{
+    aspect-ratio:16/10;border-radius:10px;margin-bottom:16px;
+    background:linear-gradient(150deg,#D6A24E,#7A2E19 92%);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .tag-row{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:600;color:var(--green);}
+
+  /* ===== CTA domicilios ===== */
+  .cta{
+    background:var(--brown);color:#F3E9D8;
+    padding:70px 0;
+  }
+  .cta .wrap{display:flex;justify-content:space-between;align-items:center;gap:40px;flex-wrap:wrap;}
+  .cta .eyebrow{color:var(--gold);}
+  .cta h2{color:#fff;font-size:30px;max-width:520px;line-height:1.22;margin-top:10px;}
+  .cta-side{max-width:420px;}
+  .cta-side p{font-size:15px;color:#D9CBB4;margin-bottom:10px;}
+  .cta-side .note{font-size:12.5px;color:var(--gold);}
+
+  /* ===== Compromiso ===== */
+  .compromiso .wrap{display:grid;grid-template-columns:1fr 1.15fr;gap:56px;align-items:center;}
+  .compromiso-photo{
+    aspect-ratio:4/5;border-radius:var(--radius);
+    background:linear-gradient(160deg,#C1272D 0%,#7A1616 100%);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 20px 40px -18px rgba(60,20,10,.4);
+  }
+  .compromiso .eyebrow{
+    background:var(--cream-2);padding:6px 14px;border-radius:20px;display:inline-block;
+  }
+  .compromiso h2{font-size:30px;margin:16px 0 16px;max-width:14ch;}
+  .compromiso p{color:var(--ink-soft);font-size:15.5px;margin-bottom:14px;max-width:52ch;}
+  .compromiso .fine{font-size:12.5px;color:var(--ink-soft);opacity:.75;font-style:italic;}
+
+  /* ===== Ubicacion ===== */
+  .location{background:var(--cream-2);}
+  .location .wrap{display:grid;grid-template-columns:1fr 1.2fr;gap:56px;align-items:center;}
+  .location .eyebrow{background:#fff;padding:6px 14px;border-radius:20px;display:inline-block;}
+  .location h2{font-size:30px;margin:16px 0 26px;}
+  .info-row{display:flex;gap:14px;margin-bottom:22px;}
+  .info-row strong{display:block;font-size:15px;margin-bottom:3px;}
+  .info-row span{font-size:14px;color:var(--ink-soft);}
+  .map-box{
+    aspect-ratio:4/3;border-radius:var(--radius);overflow:hidden;position:relative;
+    background:
+      repeating-linear-gradient(0deg, #DDE6D6 0 40px, #E6EEDF 40px 80px),
+      repeating-linear-gradient(90deg, #DDE6D6 0 40px, #E6EEDF 40px 80px);
+    background-blend-mode:multiply;
+    border:1px solid var(--line);
+  }
+
+  /* ===== Footer ===== */
+  footer{background:var(--green-dark);color:#D8E2D3;padding:60px 0 0;}
+  .foot-grid{
+    display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:48px;
+    padding-bottom:44px;border-bottom:1px solid rgba(255,255,255,.12);
+  }
+  .foot-grid h4{font-family:'Fraunces',serif;color:#fff;font-size:16px;margin-bottom:16px;}
+  .foot-brand .brand strong{color:#fff;}
+  .foot-brand p{font-size:13.5px;color:#B9C6B2;margin-top:14px;max-width:34ch;}
+  .foot-grid ul li{margin-bottom:10px;font-size:14px;}
+  .foot-grid ul a:hover{color:var(--gold);}
+  .foot-lines li{display:flex;align-items:center;}
+  .foot-bottom{
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+    padding:22px 0;font-size:12.5px;color:#93A38C;
+  }
+  .foot-bottom a{margin-left:20px;}
+
+  /* ===== Responsive ===== */
+  @media (max-width:920px){
+    nav{display:none;}
+    .hero .wrap, .compromiso .wrap, .location .wrap{grid-template-columns:1fr;}
+    .compromiso-photo{aspect-ratio:16/10;order:-1;}
+    .spec-grid{grid-template-columns:1fr;}
+    .cat-grid{grid-template-columns:1fr !important;}
+    .foot-grid{grid-template-columns:1fr;gap:30px;}
+    .topbar .calls{display:none;}
+  }
+  @media (max-width:560px){
+    .wrap{padding:0 20px;}
+    .hero h1{font-size:34px;}
+    .cta .wrap{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <div><strong>DOMICILIO GRATIS</strong> — Disfruta de la mejor sazón criolla en casa sin costo de envío.</div>
+    <div class="calls">Pide ya: <a href="tel:3204198609">320 419 8609</a><span>|</span><a href="tel:3204065469">320 406 5469</a></div>
+  </div>
+</div>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <div class="names"><strong>El Cisne</strong><small>RESTAURANTE TRADICIONAL</small></div>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="#inicio">Inicio</a></li>
+        <li><a href="#sopa">Sopa de Arroz</a></li>
+        <li><a href="#especiales">Especiales</a></li>
+        <li><a href="#ejecutivos">Platos Ejecutivos</a></li>
+        <li><a href="#corriente">Almuerzo Corriente</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="inicio">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">SABOR CASERO COLOMBIANO</span>
+      <h1>El verdadero gusto de <em>nuestra tierra</em></h1>
+      <p>En Restaurante El Cisne preparamos almuerzos con amor y tradición. Disfruta de nuestra famosa Sopa de Arroz, jugosos churrascos, pescado fresco y almuerzos corrientes todos los días. ¡Hecho con ingredientes de primera!</p>
+      <div class="badges">
+        <span>Domicilio Gratis</span>
+        <span>Platos Calientes</span>
+        <span>Sazón Popular</span>
+      </div>
+    </div>
+    <div class="hero-photo">
+      <div class="frame"></div>
+      <div class="price-tag"><small>ALMUERZOS DESDE</small><strong>$11.500</strong></div>
+    </div>
+  </div>
+</section>
+
+<section class="specialties" id="especiales">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">LOS RECOMENDADOS</span>
+      <h2>Especialidades de El Cisne</h2>
+      <p>Nuestros clientes vuelven una y otra vez por estos sabores auténticos. Descubre los reyes de nuestro menú diario.</p>
+    </div>
+    <div class="spec-grid">
+      <div class="spec-card">
+        <div class="spec-photo"><span class="tag">El Favorito de la Casa</span></div>
+        <div class="spec-body">
+          <div class="spec-title"><h3>Ajiaco con Pollo</h3><span class="price">$16.000</span></div>
+          <p>Acompañado de pierna pernil sudada, porción de arroz blanco, aguacate maduro y bebida fría.</p>
+        </div>
+      </div>
+      <div class="spec-card">
+        <div class="spec-photo"><span class="tag">Corte Premium</span></div>
+        <div class="spec-body">
+          <div class="spec-title"><h3>Churrasco al Carbón</h3><span class="price">$21.000</span></div>
+          <p>Generoso y jugoso corte de churrasco de res, asado al término ideal, acompañado de papas fritas, ensalada fresca y chimichurri casero.</p>
+        </div>
+      </div>
+      <div class="spec-card">
+        <div class="spec-photo"><span class="tag">Sabor Criollo</span></div>
+        <div class="spec-body">
+          <div class="spec-title"><h3>Bandeja Paisa Tradicional</h3><span class="price">$14.000</span></div>
+          <p>La clásica bandeja con frijoles cargamanto, arroz, carne molida, huevo frito, chicharrón, plátano maduro, aguacate y arepa.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="categories">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">NUESTRA CARTA</span>
+      <h2>Explora Nuestras Categorías</h2>
+    </div>
+
+    <div class="cat-grid" id="sopa" style="margin-bottom:24px;">
+      <div class="cat-card">
+        <div class="cat-head"><h3>Sopa de Arroz del Día</h3><span class="pill yellow">ESPECIAL DIARIO</span></div>
+        <div class="cat-photo"></div>
+        <p>Preparada a fuego lento con el sazón tradicional de la abuela. Servida bien caliente con cilantro fresco, verduras seleccionadas y arroz cocido en caldo de carne natural. Es la entrada perfecta para tu almuerzo.</p>
+        <div class="cat-foot">Porción Generosa · Incluida en Almuerzos</div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-head"><h3>Platos Especiales</h3></div>
+        <div class="price-list">
+          <div class="price-row">
+            <div><div class="name">Mojarra Frita (1 Libra)</div><div class="desc">Mojarra roja crocante de 1 libra entera, patacones crujientes, arroz y ensalada.</div></div>
+            <div class="price">$21.000</div>
+          </div>
+          <div class="price-row">
+            <div><div class="name">Churrasquito</div><div class="desc">Versión personal del clásico churrasco para calmar tu antojo sin perder jugosidad.</div></div>
+            <div class="price">$16.000</div>
+          </div>
+          <div class="price-row">
+            <div><div class="name">Churrasco Tradicional</div><div class="desc">Jugoso corte asado al carbón, con papitas a la francesa y ensalada fresca.</div></div>
+            <div class="price">$21.000</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cat-grid">
+      <div class="cat-card dark" id="ejecutivos">
+        <div class="cat-head"><h3>Platos Ejecutivos</h3><span class="pill yellow">DESDE $15.000</span></div>
+        <p>Nuestros ejecutivos incluyen principio del día, sopa de arroz, aguacate maduro y bebida fría. Elige tu proteína favorita:</p>
+        <ul class="protein-grid">
+          <li>Carne asada</li>
+          <li>Costilla de cerdo frita</li>
+          <li>Costilla de cerdo BBQ</li>
+          <li>Pierna pernil frita</li>
+          <li>Milanesa de pechuga</li>
+          <li>Pechuga a la plancha</li>
+          <li>Pierna pernil sudada</li>
+        </ul>
+      </div>
+
+      <div class="cat-card" id="corriente">
+        <div class="cat-head"><h3>Almuerzo Corriente</h3><span class="pill red">DESDE $11.500</span></div>
+        <div class="almuerzo-photo"></div>
+        <p>La opción más popular de El Cisne para tu día a día. Cambiamos el menú todos los días para ofrecerte variedad, frescura y ese sabor casero irresistible que te recarga de energía.</p>
+        <div class="tag-row">Principio del día · Proteína a elección · Sopa &amp; Bebida</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">DOMICILIOS RÁPIDOS</span>
+      <h2>¿Sin tiempo para cocinar? Llevamos la sazón a tu mesa sin costo de envío</h2>
+    </div>
+    <div class="cta-side">
+      <p>Llámanos o escríbenos directamente por WhatsApp. Tomamos tu pedido al instante y te lo enviamos empacado con cuidado para conservar toda su temperatura y sabor.</p>
+      <div class="note">* Domicilio gratis dentro de la zona de cobertura popular.</div>
+    </div>
+  </div>
+</section>
+
+<section class="compromiso">
+  <div class="wrap">
+    <div class="compromiso-photo"></div>
+    <div>
+      <span class="eyebrow">NUESTRO COMPROMISO</span>
+      <h2>Comida con alma criolla y honestidad</h2>
+      <p>No creemos en adornos innecesarios ni en sorpresas de precios en tu cuenta. Ofrecemos comida abundante, deliciosa y a precios justos. Antes de ordenar, sabes exactamente cuánto vas a pagar. Sazón casera, ingredientes honestos y el cariño de un negocio familiar que te recibe como en casa.</p>
+      <div class="fine">Inspirado en nuestra carta tradicional de El Cisne</div>
+    </div>
+  </div>
+</section>
+
+<section class="location">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">VISÍTANOS</span>
+      <h2>Ubicación y Horarios</h2>
+      <div class="info-row">
+        <div><strong>Nuestra Dirección</strong><span>Barrio Centro, Zona Gastronómica Tradicional, Colombia</span></div>
+      </div>
+      <div class="info-row">
+        <div>
+          <strong>Horario de Atención</strong>
+          <span>Lunes a Sábado: 11:30 AM – 4:00 PM<br>Domingos y Festivos: 11:30 AM – 5:00 PM</span>
+        </div>
+      </div>
+    </div>
+    <div class="map-box"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="brand">
+          <div class="names"><strong>El Cisne</strong></div>
+        </div>
+        <p>Trayendo lo mejor de la tradición y el sazón colombiano a la mesa de miles de familias. Almuerzos abundantes preparados a diario.</p>
+      </div>
+      <div>
+        <h4>Nuestros Platos</h4>
+        <ul>
+          <li><a href="#sopa">Sopa de Arroz</a></li>
+          <li><a href="#especiales">Churrasco</a></li>
+          <li><a href="#especiales">Mojarra 1 LB</a></li>
+          <li><a href="#ejecutivos">Platos Ejecutivos</a></li>
+          <li><a href="#corriente">Almuerzo Corriente</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Líneas de Domicilio</h4>
+        <p style="font-size:13.5px;color:#B9C6B2;margin-bottom:14px;">Escríbenos directamente o llámanos para entregarte tu comida al instante.</p>
+        <ul class="foot-lines">
+          <li><a href="tel:3204198609">320 419 8609</a></li>
+          <li><a href="tel:3204065469">320 406 5469</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <div>© 2026 Restaurante El Cisne. Todos los derechos reservados. Sabor colombiano con tradición.</div>
+      <div><a href="#">Términos de servicio</a><a href="#">Política de privacidad</a></div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
