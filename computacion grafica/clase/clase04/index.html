@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Selector de Color RGB</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: Arial, sans-serif;
+    color: white;
+  }
+  h1 { margin: 16px 0 4px; }
+  #hint { color: #aaa; margin-bottom: 12px; font-size: 14px; }
+  canvas {
+    background: #1e1e1e;
+    border: 3px solid #444;
+    display: block;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<h1>SELECTOR DE COLOR RGB</h1>
+<div id="hint">Haz clic y arrastra sobre cada barra para cambiar su valor</div>
+<canvas id="canvas" width="500" height="450"></canvas>
+ 
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+ 
+// ---------- Variables RGB (mismo patron visto en clase) ----------
+let r = 120;
+let g = 80;
+let b = 200;
+ 
+// ---------- Variables de interaccion (mismo patron visto en clase) ----------
+let mouseX = 0;
+let mouseY = 0;
+let mousePressed = false;
+ 
+// ---------- Geometria de los sliders ----------
+// x, y = esquina superior izquierda de cada barra
+const SLIDER_X = 100;
+const SLIDER_W = 300;
+const SLIDER_H = 40;
+ 
+const sliders = [
+  { key: "r", y: 60,  color: "#ff4d4d", label: "R" },
+  { key: "g", y: 130, color: "#4dff4d", label: "G" },
+  { key: "b", y: 200, color: "#4d9dff", label: "B" }
+];
+ 
+// Objeto donde guardamos los valores actuales (equivalente a r, g, b)
+const values = { r, g, b };
+ 
+// ---------- Eventos de mouse en el canvas ----------
+// Igual que en la diapositiva: usamos getBoundingClientRect para
+// convertir la posicion del mouse en la pantalla a posicion dentro del canvas
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+});
+ 
+canvas.addEventListener("mousedown", e => {
+  mousePressed = true;
+  updateSliderUnderMouse();
+});
+ 
+canvas.addEventListener("mouseup", () => {
+  mousePressed = false;
+});
+ 
+// Si el mouse sale del canvas mientras esta presionado, soltamos igual
+canvas.addEventListener("mouseleave", () => {
+  mousePressed = false;
+});
+ 
+// ---------- Logica de arrastre ----------
+// Revisa si el mouse esta presionado y dentro del area vertical de
+// alguna barra (mismo condicional if(mouseDown && mouseY>=.. && mouseY<=..) del PDF)
+function updateSliderUnderMouse() {
+  if (!mousePressed) return;
+ 
+  sliders.forEach(s => {
+    if (mouseY >= s.y && mouseY <= s.y + SLIDER_H) {
+      // Clamp: el punto no puede salir del rango horizontal de la barra
+      let px = Math.max(SLIDER_X, Math.min(mouseX, SLIDER_X + SLIDER_W));
+ 
+      // Mapeo de espacio de pixeles (0 -> 300) a rango de color (0 -> 255)
+      values[s.key] = Math.floor((px - SLIDER_X) * (255 / SLIDER_W));
+    }
+  });
+}
+ 
+// ---------- Dibujo de un slider ----------
+// Misma funcion "slider(x,y,value,color)" de la diapositiva:
+// primero el fondo gris, luego el relleno de color proporcional al valor
+function drawSlider(x, y, value, color, label) {
+  // fondo
+  ctx.fillStyle = "#555";
+  ctx.fillRect(x, y, SLIDER_W, SLIDER_H);
+ 
+  // relleno segun el valor (0-255 mapeado a 0-300px)
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, value * SLIDER_W / 255, SLIDER_H);
+ 
+  // borde
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, SLIDER_W, SLIDER_H);
+ 
+  // texto con el valor actual
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  ctx.fillText(label + ": " + value, x, y - 8);
+}
+ 
+// ---------- Loop principal (igual al patron con requestAnimationFrame) ----------
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+ 
+  // si el mouse sigue presionado mientras se mueve, seguimos actualizando
+  updateSliderUnderMouse();
+ 
+  // dibujar los 3 sliders
+  sliders.forEach(s => {
+    drawSlider(SLIDER_X, s.y, values[s.key], s.color, s.label);
+  });
+ 
+  // vista previa del color resultante
+  ctx.fillStyle = `rgb(${values.r},${values.g},${values.b})`;
+  ctx.fillRect(SLIDER_X, 280, SLIDER_W, 100);
+  ctx.strokeStyle = "white";
+  ctx.strokeRect(SLIDER_X, 280, SLIDER_W, 100);
+ 
+  // texto con el codigo rgb resultante
+  ctx.fillStyle = "white";
+  ctx.font = "18px Arial";
+  ctx.fillText(`rgb(${values.r}, ${values.g}, ${values.b})`, SLIDER_X, 405);
+ 
+  requestAnimationFrame(draw);
+}
+ 
+// Actualizar mientras se arrastra, no solo al hacer click
+canvas.addEventListener("mousemove", updateSliderUnderMouse);
+ 
+draw();
+</script>
+</body>
+</html>
+ 
