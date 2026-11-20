@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Triángulo de Sierpinski · Taller Semana 14</title>
+<style>
+:root{--bg:#fff5ec;--fg:#1a1a1a;--card:#f0f0f0;--ln:#2e7d32;--st:#1b4d1e;--btn:#1a1a1a;--btnfg:#fff5ec;--mut:#555;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17130f;--fg:#f3ece3;--card:#26221d;--ln:#5fb868;--st:#2c6a33;--btn:#f3ece3;--btnfg:#17130f;--mut:#b8afa4}}
+:root[data-theme="dark"]{--bg:#17130f;--fg:#f3ece3;--card:#26221d;--ln:#5fb868;--st:#2c6a33;--btn:#f3ece3;--btnfg:#17130f;--mut:#b8afa4}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px 16px 32px}
+main{max-width:760px;margin:0 auto}
+h1{font-size:1.5rem;margin:0 0 4px}
+p.sub{margin:0 0 16px;color:var(--mut);font-size:.95rem}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+button{font:inherit;cursor:pointer;border-radius:999px;border:1.5px solid var(--btn);background:transparent;color:var(--fg);padding:7px 16px}
+button.on,button.act{background:var(--btn);color:var(--btnfg)}
+.panel{display:none}.panel.show{display:block}
+canvas{display:block;width:100%;height:auto;background:var(--card);border-radius:10px}
+.ctl{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+input[type=range]{flex:1;min-width:140px;accent-color:var(--ln)}
+.note{color:var(--mut);font-size:.9rem;margin:10px 0 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Triángulo de Sierpinski</h1>
+<p class="sub">Taller Semana 14 · Computación Gráfica · recursividad en Canvas</p>
+<div class="tabs">
+  <button class="on" data-t="p1">Parte 1 · Fractal</button>
+  <button data-t="p2">Parte 2 · Animación</button>
+  <button data-t="p3">Parte 3 · Por niveles</button>
+</div>
+
+<section id="p1" class="panel show">
+  <canvas id="c1" width="700" height="620"></canvas>
+  <div class="ctl"><label for="lv">Nivel: <b id="lvv">6</b></label><input id="lv" type="range" min="0" max="8" value="6"></div>
+  <p class="note">Cada triángulo se divide en tres usando los puntos medios de sus lados; el del centro se descarta.</p>
+</section>
+
+<section id="p2" class="panel">
+  <canvas id="c2" width="700" height="620"></canvas>
+  <div class="ctl"><button id="r2">Reiniciar</button><button id="s2" class="act">Pausa</button></div>
+  <p class="note">Los triángulos del nivel 7 aparecen de arriba hacia abajo, como si el fractal se construyera solo.</p>
+</section>
+
+<section id="p3" class="panel">
+  <canvas id="c3" width="700" height="620"></canvas>
+  <div class="ctl"><button id="r3">Reiniciar</button><button id="s3" class="act">Pausa</button></div>
+  <p class="note">La animación recorre los niveles del 0 al 8 y vuelve a empezar.</p>
+</section>
+</main>
+
+<script>
+(function(){
+var W=700,H=620,A=[350,30],B=[30,584],C=[670,584];
+
+// Recursión: divide el triángulo (a,b,c) hasta llegar al nivel n
+function sier(a,b,c,n,out){
+  if(n===0){out.push([a[0],a[1],b[0],b[1],c[0],c[1]]);return out;}
+  var ab=[(a[0]+b[0])/2,(a[1]+b[1])/2],
+      bc=[(b[0]+c[0])/2,(b[1]+c[1])/2],
+      ca=[(c[0]+a[0])/2,(c[1]+a[1])/2];
+  sier(a,ab,ca,n-1,out);
+  sier(ab,b,bc,n-1,out);
+  sier(ca,bc,c,n-1,out);
+  return out;
+}
+function tri(ctx,t){
+  ctx.beginPath();ctx.moveTo(t[0],t[1]);ctx.lineTo(t[2],t[3]);ctx.lineTo(t[4],t[5]);ctx.closePath();
+}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function clear(ctx){ctx.clearRect(0,0,W,H);}
+
+// ---------- Parte 1 ----------
+var c1=document.getElementById('c1').getContext('2d'),lv=document.getElementById('lv'),lvv=document.getElementById('lvv');
+function draw1(){
+  var n=+lv.value;lvv.textContent=n;clear(c1);
+  c1.fillStyle=css('--ln');c1.strokeStyle=css('--st');c1.lineWidth=n>6?.4:1;
+  sier(A,B,C,n,[]).forEach(function(t){tri(c1,t);c1.fill();c1.stroke();});
+}
+lv.addEventListener('input',draw1);
+
+// ---------- Parte 2 ----------
+var c2=document.getElementById('c2').getContext('2d'),list2=sier(A,B,C,7,[]).sort(function(a,b){return Math.min(a[1],a[3],a[5])-Math.min(b[1],b[3],b[5]);}),
+    i2=0,run2=true,raf2=0,live2=false;
+function step2(){
+  if(!live2)return;
+  if(run2&&i2<list2.length){
+    var k=Math.ceil(list2.length/220);
+    for(var j=0;j<k&&i2<list2.length;j++,i2++){
+      var t=list2[i2],y=Math.min(t[1],t[3],t[5])/H;
+      c2.fillStyle='hsl('+(200+y*30)+',45%,'+(62-y*14)+'%)';
+      c2.strokeStyle='hsl('+(205+y*30)+',45%,38%)';c2.lineWidth=.4;
+      tri(c2,t);c2.fill();c2.stroke();
+    }
+  }
+  raf2=requestAnimationFrame(step2);
+}
+function reset2(){clear(c2);i2=0;}
+document.getElementById('r2').onclick=function(){reset2();run2=true;s2.textContent='Pausa';};
+var s2=document.getElementById('s2');
+s2.onclick=function(){run2=!run2;s2.textContent=run2?'Pausa':'Continuar';};
+
+// ---------- Parte 3 ----------
+var c3=document.getElementById('c3').getContext('2d'),n3=0,run3=true,timer3=0,s3=document.getElementById('s3');
+function draw3(){
+  clear(c3);
+  c3.fillStyle=css('--ln');c3.strokeStyle=css('--st');c3.lineWidth=n3>6?.4:1;
+  sier(A,B,C,n3,[]).forEach(function(t){tri(c3,t);c3.fill();c3.stroke();});
+  c3.fillStyle=css('--fg');c3.font='16px system-ui,sans-serif';
+  c3.fillText('Triángulo de Sierpinski - Nivel: '+n3,16,26);
+}
+function tick3(){
+  if(run3){n3=(n3+1)%9;draw3();}
+}
+document.getElementById('r3').onclick=function(){n3=0;draw3();run3=true;s3.textContent='Pausa';};
+s3.onclick=function(){run3=!run3;s3.textContent=run3?'Pausa':'Continuar';};
+
+function show(id){
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('show',p.id===id);});
+  document.querySelectorAll('.tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.t===id);});
+  cancelAnimationFrame(raf2);live2=false;clearInterval(timer3);
+  if(id==='p1')draw1();
+  if(id==='p2'){reset2();run2=true;s2.textContent='Pausa';live2=true;step2();}
+  if(id==='p3'){n3=0;draw3();run3=true;s3.textContent='Pausa';timer3=setInterval(tick3,1000);}
+}
+document.querySelectorAll('.tabs button').forEach(function(b){b.onclick=function(){show(b.dataset.t);};});
+show('p1');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Selector de Color RGB</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: Arial, sans-serif;
+    color: white;
+    transition: background 0.05s linear;
+  }
+  h1 { margin: 16px 0 4px; }
+  #hint { color: #aaa; margin-bottom: 12px; font-size: 14px; text-align: center; }
+  canvas {
+    background: #1e1e1e;
+    border: 3px solid #444;
+    display: block;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<h1>SELECTOR DE COLOR RGB</h1>
+<div id="hint"></div>
+<canvas id="canvas" width="500" height="490"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+// ---------- Variables RGB (mismo patron visto en clase) ----------
+let r = 120;
+let g = 80;
+let b = 200;
+
+// ---------- Variables de interaccion (mismo patron visto en clase) ----------
+let mouseX = 0;
+let mouseY = 0;
+let mousePressed = false;
+
+// ---------- Geometria de los sliders ----------
+const SLIDER_X = 100;
+const SLIDER_W = 300;
+const SLIDER_H = 40;
+
+// value se guarda siempre en escala 0-100 para simplificar el mapeo;
+// para R, G y B lo convertimos a 0-255 solo al momento de usarlo.
+const sliders = [
+  { key: "r",   y: 60,  color: "#ff4d4d", label: "R",         max: 255 },
+  { key: "g",   y: 130, color: "#4dff4d", label: "G",         max: 255 },
+  { key: "b",   y: 200, color: "#4d9dff", label: "B",         max: 255 },
+  { key: "sat", y: 270, color: "#ff9933", label: "Saturacion",max: 100 },
+  { key: "alpha", y: 340, color: "#cccccc", label: "Alpha",   max: 100 }
+];
+
+// Valores actuales de cada slider (r,g,b en 0-255; sat y alpha en 0-100)
+const values = { r, g, b, sat: 100, alpha: 100 };
+
+// ---------- Conversion RGB <-> HSL ----------
+// Usada para aplicar la saturacion sin perder el matiz (hue) del color base
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h, s, l };
+}
+
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return {
+    r: Math.round(r * 255),
+    g: Math.round(g * 255),
+    b: Math.round(b * 255)
+  };
+}
+
+// Toma el color base (r,g,b) y le aplica la saturacion del slider,
+// conservando el matiz (hue) y la luminosidad originales
+function getSaturatedColor() {
+  const hsl = rgbToHsl(values.r, values.g, values.b);
+  hsl.s = values.sat / 100;
+  return hslToRgb(hsl.h, hsl.s, hsl.l);
+}
+
+// ---------- Eventos de mouse en el canvas ----------
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+  updateSliderUnderMouse();
+});
+
+canvas.addEventListener("mousedown", () => {
+  mousePressed = true;
+  updateSliderUnderMouse();
+});
+
+canvas.addEventListener("mouseup", () => { mousePressed = false; });
+canvas.addEventListener("mouseleave", () => { mousePressed = false; });
+
+// ---------- Logica de arrastre ----------
+function updateSliderUnderMouse() {
+  if (!mousePressed) return;
+
+  sliders.forEach(s => {
+    if (mouseY >= s.y && mouseY <= s.y + SLIDER_H) {
+      let px = Math.max(SLIDER_X, Math.min(mouseX, SLIDER_X + SLIDER_W));
+      // Mapeo de espacio de pixeles (0 -> 300) al rango propio de cada barra
+      values[s.key] = Math.floor((px - SLIDER_X) * (s.max / SLIDER_W));
+    }
+  });
+}
+
+// ---------- Dibujo de un slider ----------
+function drawSlider(x, y, value, maxValue, color, label) {
+  ctx.fillStyle = "#555";
+  ctx.fillRect(x, y, SLIDER_W, SLIDER_H);
+
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, value * SLIDER_W / maxValue, SLIDER_H);
+
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, SLIDER_W, SLIDER_H);
+
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  ctx.fillText(label + ": " + value, x, y - 8);
+}
+
+// ---------- Loop principal ----------
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  sliders.forEach(s => {
+    drawSlider(SLIDER_X, s.y, values[s.key], s.max, s.color, s.label);
+  });
+
+  const sat = getSaturatedColor();
+
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  ctx.fillText(`rgb(${sat.r}, ${sat.g}, ${sat.b})`, SLIDER_X, 440);
+  ctx.fillText(`alpha: ${(values.alpha / 100).toFixed(2)} (aplicado al fondo de la pagina)`, SLIDER_X, 465);
+
+  // Alpha: en vez de tocar el cuadro de preview, cambia el background del body
+  document.body.style.background = `rgba(${sat.r},${sat.g},${sat.b},${values.alpha / 100})`;
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cerezo fractal</title>
+<style>
+  :root { --noche: #14101f; --corteza: #4a3030; --petalo: #f6b8cc; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; gap: 12px;
+    background: var(--noche); color: #f3e6ee; font-family: Georgia, serif;
+  }
+  main { display: grid; gap: 12px; justify-items: center; padding: 16px; }
+  canvas { max-width: 100%; height: auto; border-radius: 4px; background: #1d1630; }
+  button {
+    font: inherit; padding: 8px 18px; border: 1px solid var(--petalo); border-radius: 4px;
+    background: transparent; color: var(--petalo); cursor: pointer;
+  }
+  button:hover, button:focus-visible { background: var(--petalo); color: var(--noche); outline: none; }
+</style>
+</head>
+<body>
+<main>
+  <canvas id="lienzo" width="900" height="600"></canvas>
+  <button id="reiniciar">Hacer crecer de nuevo</button>
+</main>
+
+<script>
+const lienzo = document.getElementById("lienzo");
+const ctx = lienzo.getContext("2d");
+
+const NIVELES = 8;          // profundidad del fractal (con 3 ramas, más de 9 se vuelve pesado)
+const FACTOR_LARGO = 0.74;  // cada rama mide 74% de la anterior
+const ABERTURA = 0.5;       // ángulo de las ramas laterales (rad)
+const COLOR_RAMA = "#5b3a3a";
+
+let crecimiento = 0;        // 0 → NIVELES + 1 (el último tramo es la floración)
+let tiempo = 0;
+let contadorFlores = 0;
+
+// Colores y tamaños de flor generados una sola vez (así no parpadean)
+const PALETA = ["#f9c6d6", "#f6a8c1", "#fde3ec", "#f089ad"];
+const flores = Array.from({ length: 20000 }, () => ({
+  color: PALETA[Math.floor(Math.random() * PALETA.length)],
+  radio: 2 + Math.random() * 3
+}));
+
+// Pétalos que caen
+const petalos = Array.from({ length: 45 }, () => nuevoPetalo(true));
+function nuevoPetalo(alAzar) {
+  return {
+    x: Math.random() * lienzo.width,
+    y: alAzar ? Math.random() * lienzo.height : -10,
+    vy: 0.4 + Math.random() * 0.8,
+    fase: Math.random() * Math.PI * 2,
+    r: 1.5 + Math.random() * 2
+  };
+}
+
+function dibujarRama(x, y, largo, angulo, nivel) {
+  if (nivel === 0) {
+    return;
+  }
+
+  const profundidad = NIVELES - nivel;                       // 0 = tronco
+  const g = Math.min(Math.max(crecimiento - profundidad, 0), 1); // cuánto ha crecido esta rama
+  if (g <= 0) return;
+
+  const viento = Math.sin(tiempo * 0.0015 + profundidad * 0.5) * 0.015 * profundidad;
+  const anguloFinal = angulo + viento;
+
+  const xFinal = x + largo * g * Math.cos(anguloFinal);
+  const yFinal = y + largo * g * Math.sin(anguloFinal);
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(xFinal, yFinal);
+  ctx.strokeStyle = COLOR_RAMA;
+  ctx.lineWidth = nivel;
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  if (nivel === 1 && g >= 1) {
+    dibujarFlor(xFinal, yFinal);
+  }
+
+  const nuevoLargo = largo * FACTOR_LARGO;
+  dibujarRama(xFinal, yFinal, nuevoLargo, anguloFinal - ABERTURA, nivel - 1);
+  dibujarRama(xFinal, yFinal, nuevoLargo, anguloFinal, nivel - 1);
+  dibujarRama(xFinal, yFinal, nuevoLargo, anguloFinal + ABERTURA, nivel - 1);
+}
+
+function dibujarFlor(x, y) {
+  const aparicion = Math.min(Math.max(crecimiento - NIVELES, 0), 1);
+  if (aparicion <= 0) return;
+
+  const f = flores[contadorFlores++ % flores.length];
+  const r = f.radio * aparicion;
+
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = f.color;
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, r * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#d6527f";
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function dibujarPetalos() {
+  if (crecimiento < NIVELES + 0.6) return;
+  ctx.fillStyle = "#f9c6d6";
+  for (const p of petalos) {
+    p.y += p.vy;
+    p.x += Math.sin(tiempo * 0.002 + p.fase) * 0.6;
+    if (p.y > lienzo.height) Object.assign(p, nuevoPetalo(false));
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, p.r, p.r * 0.6, p.fase, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function animar(t) {
+  tiempo = t;
+  contadorFlores = 0;
+  ctx.clearRect(0, 0, lienzo.width, lienzo.height);
+
+  const cielo = ctx.createLinearGradient(0, 0, 0, lienzo.height);
+  cielo.addColorStop(0, "#1d1630");
+  cielo.addColorStop(1, "#3a2442");
+  ctx.fillStyle = cielo;
+  ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+
+  if (crecimiento < NIVELES + 1) {
+    crecimiento += 0.02;
+  }
+
+  dibujarRama(450, 570, 105, -Math.PI / 2, NIVELES);
+  dibujarPetalos();
+
+  requestAnimationFrame(animar);
+}
+
+document.getElementById("reiniciar").addEventListener("click", () => {
+  crecimiento = 0;
+});
+
+requestAnimationFrame(animar);
+</script>
+</body>
+</html>
